@@ -317,17 +317,17 @@ contract xAAVE is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
 
   function _calcPoolValueInToken() internal view returns (uint) {
     return _balanceFulcrumInToken()
-      .add(_balanceAave())
+      .add(_balanceAave());
       // .add(_balanceFortube())
-      .add(_balance());
+      // .add(_balance());
   }
 
   function calcPoolValueInToken() public view returns (uint) {
 
     return balanceFulcrumInToken()
-      .add(balanceAave())
+      .add(balanceAave());
       // .add(balanceFortube())
-      .add(balance());
+      // .add(balance());
   }
 
   function getPricePerFullShare() public view returns (uint) {
