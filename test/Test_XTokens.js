@@ -70,14 +70,8 @@ contract('test xtoken', async([alice, bob, admin, dev, minter]) => {
     });
 
     it('test deposit', async() => {
-        let aaveBalance = await aaveContract.methods.balanceOf(aaveOwner).call();
-        let usdcBalance = await usdcContract.methods.balanceOf(usdcOwner).call();
-        let usdtBalance = await usdtContract.methods.balanceOf(usdtOwner).call();
-        let wbtcBalance = await wbtcContract.methods.balanceOf(wbtcOwner).call();        
-        // console.log('xaaveContract', aaveBalance.toString());
-        // console.log('xusdcContract', usdcBalance.toString());
-        // console.log('xusdtContract', usdtBalance.toString());
-        // console.log('xwbtcContract', wbtcBalance.toString());
+        console.log('aprWithPoolOracle', this.aprWithPoolOracle.address);
+        console.log('earnAPRWithPool', this.earnAPRWithPool.address);
 
         await aaveContract.methods.transfer(alice, '100000000000000000000').send({ from: aaveOwner});
         console.log('xaaveContract', this.xaaveContract.address);
