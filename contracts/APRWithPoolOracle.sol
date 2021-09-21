@@ -46,7 +46,7 @@ contract APRWithPoolOracle is Ownable, Structs {
   using Address for address;
 
   uint256 DECIMAL = 10 ** 18;
-  address public protocolProvider;
+  address immutable public protocolProvider;
 
   constructor() public {
     address _AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
@@ -61,6 +61,7 @@ contract APRWithPoolOracle is Ownable, Structs {
   }
 
   function getAaveAPRAdjusted(address token) public view returns (uint256) {
+    protocolProvider = ILendingPoolAddressesProvider(AAVE).getAddress('0x1');
     if(token == address(0))
       return 0;
     else{

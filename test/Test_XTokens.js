@@ -52,14 +52,14 @@ contract('test xtoken', async([alice, bob, admin, dev, minter]) => {
             from: alice
         });
 
-        const forceSend1 = await ForceSend.new();
-        await forceSend1.go(aaveOwner, { value: ether('1') });
-        const forceSend2 = await ForceSend.new();
-        await forceSend2.go(usdcOwner, { value: ether('1') });
-        const forceSend3 = await ForceSend.new();
-        await forceSend3.go(usdtOwner, { value: ether('1') });
-        const forceSend4 = await ForceSend.new();
-        await forceSend4.go(wbtcOwner, { value: ether('1') });
+        // const forceSend1 = await ForceSend.new();
+        // await forceSend1.go(aaveOwner, { value: ether('1') });
+        // const forceSend2 = await ForceSend.new();
+        // await forceSend2.go(usdcOwner, { value: ether('1') });
+        // const forceSend3 = await ForceSend.new();
+        // await forceSend3.go(usdtOwner, { value: ether('1') });
+        // const forceSend4 = await ForceSend.new();
+        // await forceSend4.go(wbtcOwner, { value: ether('1') });
 
         await this.earnAPRWithPool.set_new_APR(this.aprWithPoolOracle.address)
         await this.xaaveContract.set_new_APR(this.earnAPRWithPool.address)
@@ -73,13 +73,17 @@ contract('test xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('aprWithPoolOracle', this.aprWithPoolOracle.address);
         console.log('earnAPRWithPool', this.earnAPRWithPool.address);
 
-        await aaveContract.methods.transfer(alice, '100000000000000000000').send({ from: aaveOwner});
-        console.log('xaaveContract', this.xaaveContract.address);
-        await usdcContract.methods.transfer(alice, '100000000').send({ from: usdcOwner});
-        console.log('xusdcContract', this.xusdcContract.address);
-        await usdtContract.methods.transfer(alice, '100000000').send({ from: usdtOwner});
-        console.log('xusdtContract', this.xusdtContract.address);
-        await wbtcContract.methods.transfer(alice, '10000000000').send({ from: wbtcOwner});
-        console.log('xwbtcContract', this.xwbtcContract.address);
+        // await aaveContract.methods.transfer(alice, '100000000000000000000').send({ from: aaveOwner});
+        // console.log('xaaveContract', this.xaaveContract.address);
+        // await usdcContract.methods.transfer(alice, '100000000').send({ from: usdcOwner});
+        // console.log('xusdcContract', this.xusdcContract.address);
+        // await usdtContract.methods.transfer(alice, '100000000').send({ from: usdtOwner});
+        // console.log('xusdtContract', this.xusdtContract.address);
+        // await wbtcContract.methods.transfer(alice, '10000000000').send({ from: wbtcOwner});
+        // console.log('xwbtcContract', this.xwbtcContract.address);
+        let result = await this.earnAPRWithPool.recommend(usdcAddress);
+        console.log(result.aapr.toString());
+        console.log(result.fapr.toString());
+        console.log(result.ftapr.toString());
     })
 })
