@@ -2,10 +2,10 @@
 pragma solidity 0.6.8;
 pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./libraries/Ownable.sol";
 
 // Fulcrum
 interface IFulcrum {
