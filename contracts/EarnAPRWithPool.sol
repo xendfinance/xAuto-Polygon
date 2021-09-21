@@ -112,6 +112,7 @@ contract EarnAPRWithPool is Ownable {
       address token,
       address aToken
     ) public onlyOwner {
+        require(aave[token] == address(0), "This token is already set.");
         aave[token] = aToken;
     }
 
