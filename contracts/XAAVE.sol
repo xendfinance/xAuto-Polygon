@@ -30,6 +30,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   address public apr;
   address public feeAddress;
   uint256 public feeAmount;
+  uint256 public feePrecision;
 
   mapping (address => uint256) depositedAmount;
 
@@ -49,6 +50,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     aaveToken = address(0x1d2a0E5EC8E5bBDCA5CB219e649B565d8e5c3360);
     feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
     feeAmount = 0;
+    feePrecision = 1000;
     approveToken();
   }
 
@@ -57,11 +59,14 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       apr = _new_APR;
   }
   function set_new_feeAmount(uint256 fee) public onlyOwner{
-    require(fee < 1000, 'fee amount must be less than 100%');
+    require(fee < feePrecision, 'fee amount must be less than 100%');
     feeAmount = fee;
   }
   function set_new_fee_address(address _new_fee_address) public onlyOwner {
       feeAddress = _new_fee_address;
+  }
+  function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
+    feePrecision = _newFeePrecision;
   }
   // Quick swap low gas method for pool swaps
   function deposit(uint256 _amount)
@@ -119,7 +124,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
         _withdrawSome(r.sub(b));
       }
 
-      uint256 fee = profit.mul(feeAmount).div(1000);
+      uint256 fee = profit.mul(feeAmount).div(feePrecision);
       if(fee > 0){
         IERC20(token).approve(feeAddress, fee);
         ITreasury(feeAddress).depositToken(token);
