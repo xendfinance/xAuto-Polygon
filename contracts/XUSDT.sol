@@ -137,7 +137,7 @@ contract xUSDT is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       }
       IERC20(token).safeTransfer(msg.sender, r.sub(fee));
       _burn(msg.sender, _shares);
-      depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares);
+      depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
       rebalance();
       pool = _calcPoolValueInToken();
       emit Withdraw(msg.sender, _shares);
