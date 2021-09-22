@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.8;
 
-import "./Context.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 /**
  * @dev Contract module which provides a basic access control mechanism, where
  * there is an account (an owner) that can be granted exclusive access to
@@ -68,7 +68,7 @@ abstract contract Ownable is Context {
 
     function acceptOwnership() external {
         require(msg.sender == _candidate, "Ownable: not cadidate");
-        emit OwnershipTransferred(_owner, newOwner);
+        emit OwnershipTransferred(_owner, _candidate);
         _owner = _candidate;
     }
 }

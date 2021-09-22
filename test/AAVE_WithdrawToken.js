@@ -9,7 +9,7 @@ const aaveABI = require('./abi/aave');
 
 const aaveAddress = '0xD6DF932A45C0f255f85145f286eA0b292B21C90B';
 const aaveContract = new web3.eth.Contract(aaveABI, aaveAddress);
-const aaveOwner = '0x65b1b96bd01926d3d60dd3c8bc452f22819443a9';
+const aaveOwner = '0xEc0EFFAb58756E8836896220ca73776b9Dc52251';
 
 contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
 
