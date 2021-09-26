@@ -66,6 +66,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       feeAddress = _new_fee_address;
   }
   function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
+    assert(_newFeePrecision > 100);
     feePrecision = _newFeePrecision;
   }
   // Quick swap low gas method for pool swaps
