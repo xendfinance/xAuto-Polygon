@@ -34,7 +34,6 @@ contract EarnAPRWithPool is Ownable {
 
     mapping(address => uint256) public pools;
     mapping(address => address) public fulcrum;
-    mapping(address => address) public aave;
     mapping(address => address) public fortube;
 
     address public APR;
@@ -53,12 +52,6 @@ contract EarnAPRWithPool is Ownable {
         addFTToken(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, 0xf330b39f74e7f71ab9604A5307690872b8125aC8); //ftUSDC
         addFTToken(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6, 0x57160962Dc107C8FBC2A619aCA43F79Fd03E7556); //ftWBTC
         
-        // LendingPoolAddressesProvider requires asset address for apy
-        addAToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270, 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270); //aMATIC
-        addAToken(0xc2132D05D31c914a87C6611C10748AEb04B58e8F, 0xc2132D05D31c914a87C6611C10748AEb04B58e8F); //aUSDT
-        addAToken(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); //aUSDC
-        addAToken(0xD6DF932A45C0f255f85145f286eA0b292B21C90B, 0xD6DF932A45C0f255f85145f286eA0b292B21C90B); //aAAVE
-        addAToken(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6, 0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6); //aWBTC
     }
 
     // Wrapper for legacy v1 token support
@@ -83,7 +76,7 @@ contract EarnAPRWithPool is Ownable {
       if (addr != address(0)) {
         _fulcrum = IAPRWithPoolOracle(APR).getFulcrumAPRAdjusted(addr, 0);
       }
-      addr = aave[_token];
+      addr = _token;
       if (addr != address(0)) {
         _aave = IAPRWithPoolOracle(APR).getAaveAPRAdjusted(addr);
       }
@@ -105,14 +98,6 @@ contract EarnAPRWithPool is Ownable {
     ) public onlyOwner {
         require(fulcrum[token] == address(0), "This token is already set.");
         fulcrum[token] = fToken;
-    }
-
-    function addAToken(
-      address token,
-      address aToken
-    ) public onlyOwner {
-        require(aave[token] == address(0), "This token is already set.");
-        aave[token] = aToken;
     }
 
     function addFTToken(
