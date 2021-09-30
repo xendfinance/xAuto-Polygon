@@ -34,7 +34,6 @@ contract EarnAPRWithPool is Ownable {
 
     mapping(address => uint256) public pools;
     mapping(address => address) public fulcrum;
-    mapping(address => address) public aave;
     mapping(address => address) public fortube;
 
     address public APR;
