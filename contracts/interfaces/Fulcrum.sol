@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.8;
+pragma solidity 0.6.12;
 interface Fulcrum {
     function mint(address receiver, uint256 amount) external payable returns (uint256 mintAmount);
     function burn(address receiver, uint256 burnAmount) external returns (uint256 loanAmountPaid);
