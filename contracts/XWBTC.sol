@@ -1,27 +1,25 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './libraries/Context.sol';
-import './libraries/Ownable.sol';
-import './libraries/SafeMath.sol';
-import './libraries/Decimal.sol';
-import './libraries/Address.sol';
-import './libraries/SafeERC20.sol';
-import './libraries/ReentrancyGuard.sol';
-import './libraries/ERC20.sol';
-import './libraries/ERC20Detailed.sol';
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/Ownable.sol";
 import './libraries/TokenStructs.sol';
 import './interfaces/Aave.sol';
-import './interfaces/AToken.sol';
 import './interfaces/FortubeToken.sol';
 import './interfaces/FortubeBank.sol';
 import './interfaces/Fulcrum.sol';
 import './interfaces/IIEarnManager.sol';
 import './interfaces/LendingPoolAddressesProvider.sol';
-import './interfaces/IERC20.sol';
 import './interfaces/ITreasury.sol';
 
-contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
+contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   using SafeERC20 for IERC20;
   using Address for address;
   using SafeMath for uint256;
@@ -34,8 +32,9 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
   address public apr;
   address public fortubeToken;
   address public fortubeBank;
-  address public FEE_ADDRESS;
+  address public feeAddress;
   uint256 public feeAmount;
+  uint256 public feePrecision;
 
   mapping (address => uint256) depositedAmount;
 
@@ -48,14 +47,7 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
 
   Lender public provider = Lender.NONE;
 
-  constructor () public ERC20Detailed("xend WBTC", "xWTBC", 18) {
-    //mumbai network
-    // token = address(0xcf6bc4ae4a99c539353e4bf4c80fff296413ceea);
-    // apr = address(0xCC7986A6a8A0774070868Cf0D4aCe451DbEC76EF);
-    // aave = address(0x178113104fEcbcD7fF8669a0150721e231F0FD4B);
-    // fulcrum = address(0x178113104fEcbcD7fF8669a0150721e231F0FD4B);
-    // aaveToken = address(0xc9276ECa6798A14f64eC33a526b547DAd50bDa2F);
-
+  constructor () public ERC20("xend WBTC", "xWTBC") {
     token = address(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6);
     apr = address(0xdD6d648C991f7d47454354f4Ef326b04025a48A8);
     aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
@@ -63,21 +55,27 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
     aaveToken = address(0x5c2ed810328349100A66B82b78a1791B101C9D61);
     fortubeToken = address(0x57160962Dc107C8FBC2A619aCA43F79Fd03E7556);
     fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-
-    FEE_ADDRESS = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
     feeAmount = 0;
+    feePrecision = 1000;
     approveToken();
-  } 
+  }
 
   // Ownable setters incase of support in future for these systems
   function set_new_APR(address _new_APR) public onlyOwner {
       apr = _new_APR;
   }
   function set_new_feeAmount(uint256 fee) public onlyOwner{
+    require(fee < feePrecision, 'fee amount must be less than 100%');
     feeAmount = fee;
   }
   function set_new_fee_address(address _new_fee_address) public onlyOwner {
-      FEE_ADDRESS = _new_fee_address;
+      feeAddress = _new_fee_address;
+  }
+  function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
+    assert(_newFeePrecision >= 100);
+    set_new_feeAmount(feeAmount*_newFeePrecision/feePrecision);
+    feePrecision = _newFeePrecision;
   }
   // Quick swap low gas method for pool swaps
   function deposit(uint256 _amount)
@@ -85,18 +83,20 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
       nonReentrant
   {
       require(_amount > 0, "deposit must be greater than 0");
-      rebalance();
       pool = _calcPoolValueInToken();
-
-      IERC20(token).transferFrom(msg.sender, address(this), _amount);
-
+      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+      rebalance();
       // Calculate pool shares
       uint256 shares = 0;
       if (pool == 0) {
         shares = _amount;
         pool = _amount;
       } else {
-        shares = (_amount.mul(_totalSupply)).div(pool);
+        if (totalSupply() == 0) {
+          shares = _amount;
+        } else {
+          shares = (_amount.mul(totalSupply())).div(pool);
+        }
       }
       pool = _calcPoolValueInToken();
       _mint(msg.sender, shares);
@@ -116,12 +116,14 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
 
       // Could have over value from xTokens
       pool = _calcPoolValueInToken();
+      uint256 i = (pool.mul(ibalance)).div(totalSupply());
       // Calc to redeem before updating balances
-      uint256 r = (pool.mul(_shares)).div(_totalSupply);
-
-
-      _balances[msg.sender] = _balances[msg.sender].sub(_shares, "redeem amount exceeds balance");
-      _totalSupply = _totalSupply.sub(_shares);
+      uint256 r = (pool.mul(_shares)).div(totalSupply());
+      if(i < depositedAmount[msg.sender]){
+        i = i.add(1);
+        r = r.add(1);
+      }
+      uint256 profit = (i.sub(depositedAmount[msg.sender])).mul(_shares.div(depositedAmount[msg.sender]));      
 
       emit Transfer(msg.sender, address(0), _shares);
 
@@ -131,21 +133,20 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
         _withdrawSome(r.sub(b));
       }
 
-      uint256 fee = (r.sub(depositedAmount[msg.sender])).mul(feeAmount).div(1000);
+      uint256 fee = profit.mul(feeAmount).div(feePrecision);
       if(fee > 0){
-        IERC20(token).approve(FEE_ADDRESS, fee);
-        ITreasury(FEE_ADDRESS).depositToken(token);
+        IERC20(token).approve(feeAddress, fee);
+        ITreasury(feeAddress).depositToken(token);
       }
-      IERC20(token).transfer(msg.sender, r.sub(fee));
-      depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(r);
+      IERC20(token).safeTransfer(msg.sender, r.sub(fee));
+      _burn(msg.sender, _shares);
+      depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
       rebalance();
       pool = _calcPoolValueInToken();
       emit Withdraw(msg.sender, _shares);
   }
 
-  function() external payable {
-
-  }
+  receive() external payable {}
 
   function recommend() public view returns (Lender) {
     (, uint256 fapr,uint256 aapr, uint256 ftapr) = IIEarnManager(apr).recommend(token);
@@ -336,14 +337,13 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
       FortubeBank(fortubeBank).deposit(token, amount);
   }
   function _withdrawAave(uint amount) internal {
-      Aave(getAave()).withdraw(token, amount, address(this));
+      require(Aave(getAave()).withdraw(token, amount, address(this)) > 0, "AAVE: withdraw failed");
   }
   function _withdrawFulcrum(uint amount) internal {
       require(Fulcrum(fulcrum).burn(address(this), amount) > 0, "FULCRUM: withdraw failed");
   }
   function _withdrawFortube(uint amount) internal {
-      require(amount > 0, "FORTUBE: withdraw failed");
-      FortubeBank(fortubeBank).withdraw(token, amount);
+      require(FortubeBank(fortubeBank).withdraw(token, amount) > 0, "Fortube: withdraw failed");
   }
 
   function _calcPoolValueInToken() internal view returns (uint) {
@@ -363,6 +363,6 @@ contract xWBTC is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, TokenStructs {
 
   function getPricePerFullShare() public view returns (uint) {
     uint _pool = calcPoolValueInToken();
-    return _pool.mul(1e18).div(_totalSupply);
+    return _pool.mul(1e18).div(totalSupply());
   }
 }
