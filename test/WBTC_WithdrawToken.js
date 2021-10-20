@@ -31,38 +31,67 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         
         await wbtcContract.methods.transfer(alice, '10000000000').send({ from: wbtcOwner});
         await wbtcContract.methods.transfer(admin, '10000000000').send({ from: wbtcOwner});
+        await wbtcContract.methods.transfer(bob, '10000000000').send({ from: wbtcOwner});
+        await wbtcContract.methods.transfer(minter, '10000000000').send({ from: wbtcOwner});
+        await wbtcContract.methods.transfer(dev, '10000000000').send({ from: wbtcOwner});
         
         let xwbtc = this.xwbtcContract
 
-        let statbleTokenAddress = await this.xwbtcContract.token();
+        // let statbleTokenAddress = await this.xwbtcContract.token();
         await this.earnAPRWithPool.set_new_APR(this.aprWithPoolOracle.address)
         await this.xwbtcContract.set_new_APR(this.earnAPRWithPool.address)
-        await this.earnAPRWithPool.addXToken(statbleTokenAddress, this.xwbtcContract.address);
+        // await this.earnAPRWithPool.addXToken(statbleTokenAddress, this.xwbtcContract.address);
 
-        await wbtcContract.methods.approve(xwbtc.address, 10000000).send({
-            from: alice
-        });
+        // await wbtcContract.methods.approve(xwbtc.address, 10000000000).send({
+        //     from: admin
+        // });
 
-        await wbtcContract.methods.approve(xwbtc.address, 10000000000).send({
+        // await xwbtc.deposit(10000000000, {from: admin});
+
+        
+
+        // await wbtcContract.methods.approve(xwbtc.address, 10000000000).send({
+        //     from: admin
+        // });
+
+        await wbtcContract.methods.transfer(xwbtc.address, 10000).send({
             from: admin
         });
-
-        await xwbtc.deposit(10000000, {from: alice});
-        await xwbtc.deposit(10000000000, {from: admin});
 
     });
 
     it('test withdraw', async() => {
         // let xwbtc = await XWBTC.deployed();
-        let xwbtc = this.xwbtcContract;
-        fee_address = '0x3F58d9e9E74990bf38578043F7332444C9624561'
+        let xwbtc = this.xwbtcContract;     
+        await wbtcContract.methods.approve(xwbtc.address, 100000).send({
+            from: admin
+        }); 
+        await wbtcContract.methods.approve(xwbtc.address, 10000000).send({
+            from: alice
+        });
+
+        await wbtcContract.methods.approve(xwbtc.address, 48457).send({
+            from: dev
+        }); 
+        await wbtcContract.methods.approve(xwbtc.address, 1000).send({
+            from: minter
+        });
+
+        await wbtcContract.methods.approve(xwbtc.address, 458937489).send({
+            from: bob
+        });
+
+        await xwbtc.deposit(100000, {from: admin});
+        await xwbtc.deposit(48457, {from: dev});
+        await xwbtc.deposit(1000, {from: minter});
+        await xwbtc.deposit(458937489, {from: bob});
+        await xwbtc.deposit(10000000, {from: alice});
+
+
+        fee_address = '0x67926b0C4753c42b31289C035F8A656D800cD9e7'
         xwbtc.set_new_fee_address(fee_address);
         console.log('before_xwbtc_balance',await xwbtc.balance());
         console.log('before_alice_balance',await wbtcContract.methods.balanceOf(alice).call());
-        // await xwbtc.supplyAave(1000);
-        // let aave_balance = await xwbtc.balanceAave();
-        // console.log('before_aave_balance', aave_balance.toString());
-        console.log('xwbtc_balance',await xwbtc.balance());
         let tokenAmount = await xwbtc.balanceOf(alice);
         console.log('------------', tokenAmount.toString());
         await xwbtc.rebalance();
