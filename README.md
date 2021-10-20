@@ -8,7 +8,7 @@ We are using 3 lending protocols on Polygon mainnet(AAVE, Fulcrum and ForTube). 
 
 ## Polygon Earn - Smart Contract Operations:
 
-![Operation_img](https://github.com/StarsIdea/polygon-earn/blob/main/operations.png)
+![Operation_img](https://github.com/xendfinance/polygon-earn/blob/main/operations.png)
 
 ### 1. Deposit
 * Selects lending provider
@@ -23,3 +23,6 @@ If the balance is enough, withdraw the supported token amount.
 
 ### 3. Rebalance
 * Selects a lending provider with max APY and withdraws balances from other lending protocols and then supplies the withdrawn token to selected lending provider with max APY
+
+## Deployed Contracts
+Visit https://docs.xend.finance/contracts/registry to see smart contract addresses
