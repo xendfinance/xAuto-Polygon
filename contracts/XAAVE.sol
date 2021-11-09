@@ -56,9 +56,9 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     feePrecision = 1000;
     approveToken();
     lenderStatus[Lender.AAVE] = true;
-    lenderStatus[Lender.FULCRUM] = true;
+    lenderStatus[Lender.FULCRUM] = false;
     withdrawable[Lender.AAVE] = true;
-    withdrawable[Lender.FULCRUM] = true;
+    withdrawable[Lender.FULCRUM] = false;
   }
 
   // Ownable setters incase of support in future for these systems
@@ -166,8 +166,8 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     return newProvider;
   }
 
-  function balance() public view returns (uint256) {
-    return IERC20(token).balanceOf(address(this));
+  function balance() external view returns (uint256) {
+    return _balance();
   }
 
   function getAave() public view returns (address) {
@@ -183,24 +183,14 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       IERC20(token).approve(fulcrum, uint(-1));
   }
 
-  function balanceFulcrumInToken() public view returns (uint256) {
-    uint256 b = balanceFulcrum();
-    if (b > 0 && withdrawable[Lender.FULCRUM]) {
-      b = Fulcrum(fulcrum).assetBalanceOf(address(this));
-    }
-    return b;
+  function balanceFulcrumInToken() external view returns (uint256) {
+    return _balanceFulcrumInToken();
   }
-  function balanceFulcrum() public view returns (uint256) {
-    if(withdrawable[Lender.FULCRUM])
-      return IERC20(fulcrum).balanceOf(address(this));
-    else
-      return 0;
+  function balanceFulcrum() external view returns (uint256) {
+    return _balanceFulcrum();
   }
-  function balanceAave() public view returns (uint256) {
-    if(withdrawable[Lender.AAVE])
-      return IERC20(aaveToken).balanceOf(address(this));
-    else
-      return 0;
+  function balanceAave() external view returns (uint256) {
+    return _balanceAave();
   }
 
   function _balance() internal view returns (uint256) {
@@ -208,7 +198,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
 
   function _balanceFulcrumInToken() internal view returns (uint256) {
-    uint256 b = balanceFulcrum();
+    uint256 b = _balanceFulcrum();
     if (b > 0 && withdrawable[Lender.FULCRUM]) {
       b = Fulcrum(fulcrum).assetBalanceOf(address(this));
     }
@@ -240,9 +230,9 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
 
   function _withdrawSomeFulcrum(uint256 _amount) internal {
-    uint256 b = balanceFulcrum();
+    uint256 b = _balanceFulcrum();
     // Balance of token in fulcrum
-    uint256 bT = balanceFulcrumInToken();
+    uint256 bT = _balanceFulcrumInToken();
     require(bT >= _amount, "insufficient funds");
     // can have unintentional rounding errors
     uint256 amount = (b.mul(_amount)).div(bT).add(1);
@@ -251,7 +241,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
   function _withdrawSome(uint256 _amount) internal {
     if (provider == Lender.AAVE) {
-      require(balanceAave() >= _amount, "insufficient funds");
+      require(_balanceAave() >= _amount, "insufficient funds");
       _withdrawAave(_amount);
     }
     if (provider == Lender.FULCRUM) {
@@ -266,19 +256,6 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       _withdrawAll();
     }
 
-    if (balance() > 0) {
-      if (newProvider == Lender.FULCRUM) {
-        supplyFulcrum(balance());
-      } else if (newProvider == Lender.AAVE) {
-        supplyAave(balance());
-      }
-    }
-
-    provider = newProvider;
-  }
-
-  // Internal only rebalance for better gas in redeem
-  function _rebalance(Lender newProvider) internal {
     if (_balance() > 0) {
       if (newProvider == Lender.FULCRUM) {
         supplyFulcrum(_balance());
@@ -286,6 +263,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
         supplyAave(_balance());
       }
     }
+
     provider = newProvider;
   }
 
@@ -309,15 +287,12 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       .add(_balance());
   }
 
-  function calcPoolValueInToken() public view returns (uint) {
-
-    return balanceFulcrumInToken()
-      .add(balanceAave())
-      .add(balance());
+  function calcPoolValueInToken() external view returns (uint) {
+    return _calcPoolValueInToken();
   }
 
   function getPricePerFullShare() public view returns (uint) {
-    uint _pool = calcPoolValueInToken();
+    uint _pool = _calcPoolValueInToken();
     return _pool.mul(1e18).div(totalSupply());
   }
 
