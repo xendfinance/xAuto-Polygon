@@ -81,7 +81,7 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       feeAddress = _new_fee_address;
   }
   function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
-    assert(_newFeePrecision >= 100);
+    require(_newFeePrecision >= 100, "fee precision must be greater than 100 at least");
     set_new_feeAmount(feeAmount*_newFeePrecision/feePrecision);
     feePrecision = _newFeePrecision;
   }
