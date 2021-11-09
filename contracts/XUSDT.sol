@@ -80,7 +80,7 @@ contract xUSDT is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       feeAddress = _new_fee_address;
   }
   function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
-    assert(_newFeePrecision >= 100);
+    require(_newFeePrecision >= 100, "fee precision must be greater than 100 at least");
     set_new_feeAmount(feeAmount*_newFeePrecision/feePrecision);
     feePrecision = _newFeePrecision;
   }
@@ -337,20 +337,6 @@ contract xUSDT is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       }
     }
 
-    provider = newProvider;
-  }
-
-  // Internal only rebalance for better gas in redeem
-  function _rebalance(Lender newProvider) internal {
-    if (_balance() > 0) {
-      if (newProvider == Lender.FULCRUM) {
-        supplyFulcrum(_balance());
-      } else if (newProvider == Lender.AAVE) {
-        supplyAave(_balance());
-      } else if (newProvider == Lender.FORTUBE) {
-        supplyFortube(_balance());
-      }
-    }
     provider = newProvider;
   }
 
