@@ -44,6 +44,8 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       FULCRUM,
       FORTUBE
   }
+  mapping (Lender => bool) public lenderStatus;
+  mapping (Lender => bool) public withdrawable;
 
   Lender public provider = Lender.NONE;
 
@@ -59,6 +61,12 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     feeAmount = 0;
     feePrecision = 1000;
     approveToken();
+    lenderStatus[Lender.AAVE] = true;
+    lenderStatus[Lender.FULCRUM] = true;
+    lenderStatus[Lender.FORTUBE] = true;
+    withdrawable[Lender.AAVE] = true;
+    withdrawable[Lender.FULCRUM] = true;
+    withdrawable[Lender.FORTUBE] = true;
   }
 
   // Ownable setters incase of support in future for these systems
@@ -151,13 +159,13 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   function recommend() public view returns (Lender) {
     (, uint256 fapr,uint256 aapr, uint256 ftapr) = IIEarnManager(apr).recommend(token);
     uint256 max = 0;
-    if (fapr > max) {
+    if (fapr > max && lenderStatus[Lender.FULCRUM]) {
       max = fapr;
     }
-    if (aapr > max) {
+    if (aapr > max && lenderStatus[Lender.AAVE]) {
       max = aapr;
     }
-    if (ftapr > max) {
+    if (ftapr > max && lenderStatus[Lender.FORTUBE]) {
       max = ftapr;
     }
     Lender newProvider = Lender.NONE;
@@ -190,7 +198,7 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
   function balanceFortubeInToken() public view returns (uint256) {
     uint256 b = balanceFortube();
-    if (b > 0) {
+    if (b > 0 && withdrawable[Lender.FORTUBE]) {
       uint256 exchangeRate = FortubeToken(fortubeToken).exchangeRateStored();
       uint256 oneAmount = FortubeToken(fortubeToken).ONE();
       b = b.mul(exchangeRate).div(oneAmount);
@@ -200,19 +208,28 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
   function balanceFulcrumInToken() public view returns (uint256) {
     uint256 b = balanceFulcrum();
-    if (b > 0) {
+    if (b > 0 && withdrawable[Lender.FULCRUM]) {
       b = Fulcrum(fulcrum).assetBalanceOf(address(this));
     }
     return b;
   }
   function balanceFulcrum() public view returns (uint256) {
-    return IERC20(fulcrum).balanceOf(address(this));
+    if(withdrawable[Lender.FULCRUM])
+      return IERC20(fulcrum).balanceOf(address(this));
+    else
+      return 0;
   }
   function balanceAave() public view returns (uint256) {
-    return IERC20(aaveToken).balanceOf(address(this));
+    if(withdrawable[Lender.AAVE])
+      return IERC20(aaveToken).balanceOf(address(this));
+    else
+      return 0;
   }
   function balanceFortube() public view returns (uint256) {
-    return FortubeToken(fortubeToken).balanceOf(address(this));
+    if(withdrawable[Lender.FORTUBE])
+      return FortubeToken(fortubeToken).balanceOf(address(this));
+    else
+      return 0;
   }
 
   function _balance() internal view returns (uint256) {
@@ -221,7 +238,7 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
   function _balanceFulcrumInToken() internal view returns (uint256) {
     uint256 b = balanceFulcrum();
-    if (b > 0) {
+    if (b > 0 && withdrawable[Lender.FULCRUM]) {
       b = Fulcrum(fulcrum).assetBalanceOf(address(this));
     }
     return b;
@@ -229,7 +246,7 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
   function _balanceFortubeInToken() internal view returns (uint256) {
     uint256 b = balanceFortube();
-    if (b > 0) {
+    if (b > 0 && withdrawable[Lender.FORTUBE]) {
       uint256 exchangeRate = FortubeToken(fortubeToken).exchangeRateStored();
       uint256 oneAmount = FortubeToken(fortubeToken).ONE();
       b = b.mul(exchangeRate).div(oneAmount);
@@ -237,13 +254,22 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     return b;
   }
   function _balanceFulcrum() internal view returns (uint256) {
-    return IERC20(fulcrum).balanceOf(address(this));
+    if(withdrawable[Lender.FULCRUM])
+      return IERC20(fulcrum).balanceOf(address(this));
+    else
+      return 0;
   }
   function _balanceAave() internal view returns (uint256) {
-    return IERC20(aaveToken).balanceOf(address(this));
+    if(withdrawable[Lender.AAVE])
+      return IERC20(aaveToken).balanceOf(address(this));
+    else
+      return 0;
   }
   function _balanceFortube() internal view returns (uint256) {
-    return IERC20(fortubeToken).balanceOf(address(this));
+    if(withdrawable[Lender.FORTUBE])
+      return FortubeToken(fortubeToken).balanceOf(address(this));
+    else
+      return 0;
   }
 
   function _withdrawAll() internal {
@@ -364,5 +390,22 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   function getPricePerFullShare() public view returns (uint) {
     uint _pool = calcPoolValueInToken();
     return _pool.mul(1e18).div(totalSupply());
+  }
+
+  function activateLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = true;
+    withdrawable[lender] = true;
+    rebalance();
+  }
+
+  function deactivateWithdrawableLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = false;
+    rebalance();
+  }
+
+  function deactivateNonWithdrawableLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = false;
+    withdrawable[lender] = false;
+    rebalance();
   }
 }
