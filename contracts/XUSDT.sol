@@ -57,7 +57,7 @@ contract xUSDT is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     aaveToken = address(0x60D55F02A771d515e077c9C2403a1ef324885CeC);
     fortubeToken = address(0xE2272A850188B43E94eD6DF5b75f1a2FDcd5aC26);
     fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
     feeAmount = 0;
     feePrecision = 1000;
     approveToken();

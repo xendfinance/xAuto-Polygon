@@ -58,7 +58,7 @@ contract xUSDC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     aaveToken = address(0x1a13F4Ca1d028320A707D99520AbFefca3998b7F);
     fortubeToken = address(0xf330b39f74e7f71ab9604A5307690872b8125aC8);
     fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
     feeAmount = 0;
     feePrecision = 1000;
     approveToken();
