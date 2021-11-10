@@ -57,7 +57,7 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     aaveToken = address(0x5c2ed810328349100A66B82b78a1791B101C9D61);
     fortubeToken = address(0x57160962Dc107C8FBC2A619aCA43F79Fd03E7556);
     fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
     feeAmount = 0;
     feePrecision = 1000;
     approveToken();

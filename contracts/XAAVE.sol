@@ -51,7 +51,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
     fulcrum = address(0xf009c28b2D9E13886105714B895f013E2e43EE12);
     aaveToken = address(0x1d2a0E5EC8E5bBDCA5CB219e649B565d8e5c3360);
-    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
     feeAmount = 0;
     feePrecision = 1000;
     approveToken();
