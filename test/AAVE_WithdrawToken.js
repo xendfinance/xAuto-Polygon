@@ -101,6 +101,8 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         await xaave.rebalance();
         let provider = await xaave.provider();
         console.log('provider',provider.toString());
+        await xaave.withdraw(1000000);
+        tokenAmount = await xaave.balanceOf(alice);
         await xaave.withdraw(tokenAmount.toString());
         console.log('after_xaave_balance',await xaave.balance());
         console.log('after_alice_balance',await aaveContract.methods.balanceOf(alice).call());

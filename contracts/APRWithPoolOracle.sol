@@ -19,7 +19,6 @@ interface IFortube {
 
 
 interface IProtocolProvider {
-    function ADDRESSES_PROVIDER() external view returns (address);
     function getReserveData(
         address token
     )
