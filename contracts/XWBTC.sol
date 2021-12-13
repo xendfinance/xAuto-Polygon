@@ -35,6 +35,8 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   address public feeAddress;
   uint256 public feeAmount;
   uint256 public feePrecision;
+  uint256 private lastWithdrawFeeTime;
+  uint256 public totalDepositedAmount;
 
   mapping (address => uint256) depositedAmount;
 
@@ -109,6 +111,9 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       pool = _calcPoolValueInToken();
       _mint(msg.sender, shares);
       depositedAmount[msg.sender] = depositedAmount[msg.sender].add(_amount);
+      totalDepositedAmount = totalDepositedAmount.add(_amount);
+      if(lastWithdrawFeeTime == 0)
+        lastWithdrawFeeTime = block.timestamp;
       emit Deposit(msg.sender, _amount);
   }
 
@@ -124,14 +129,10 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
       // Could have over value from xTokens
       pool = _calcPoolValueInToken();
-      uint256 i = (pool.mul(ibalance)).div(totalSupply());
       // Calc to redeem before updating balances
-      uint256 r = (pool.mul(_shares)).div(totalSupply());
-      if(i < depositedAmount[msg.sender]){
-        i = i.add(1);
-        r = r.add(1);
-      }
-      uint256 profit = (i.sub(depositedAmount[msg.sender])).mul(_shares.div(depositedAmount[msg.sender]));      
+      uint256 fee = pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision);
+      // uint256 fee = 0;
+      uint256 r = (pool.sub(fee).mul(_shares)).div(totalSupply());
 
       emit Transfer(msg.sender, address(0), _shares);
 
@@ -141,14 +142,10 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
         _withdrawSome(r.sub(b));
       }
 
-      uint256 fee = profit.mul(feeAmount).div(feePrecision);
-      if(fee > 0){
-        IERC20(token).approve(feeAddress, fee);
-        ITreasury(feeAddress).depositToken(token);
-      }
-      IERC20(token).safeTransfer(msg.sender, r.sub(fee));
-      _burn(msg.sender, _shares);
+      IERC20(token).safeTransfer(msg.sender, r);
+      totalDepositedAmount = totalDepositedAmount.sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
       depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
+      _burn(msg.sender, _shares);
       rebalance();
       pool = _calcPoolValueInToken();
       emit Withdraw(msg.sender, _shares);
@@ -370,5 +367,16 @@ contract xWBTC is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     lenderStatus[lender] = false;
     withdrawable[lender] = false;
     rebalance();
+  }
+  
+  function withdrawFee() public {
+    pool = _calcPoolValueInToken();
+    uint256 amount = pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision).mul(block.timestamp.sub(lastWithdrawFeeTime)).div(365 * 24 * 60 * 60);
+    if(amount > 0){
+      _withdrawSome(amount);
+      IERC20(token).approve(feeAddress, amount);
+      ITreasury(feeAddress).depositToken(token);
+      lastWithdrawFeeTime = block.timestamp;
+    }
   }
 }

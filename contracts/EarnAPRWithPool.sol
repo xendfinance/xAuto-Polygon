@@ -15,6 +15,7 @@ interface IAPRWithPoolOracle {
   function getAaveAPR(address token) external view returns (uint256);
   function getAaveAPRAdjusted(address token) external view returns (uint256);
   function getFortubeAPRAdjusted(address token) external view returns (uint256);
+  function AAVE() external view returns (address);
 
 }
 
@@ -27,6 +28,24 @@ interface IxToken {
   function decimals() external view returns (uint256);
 }
 
+interface ILendingPoolAddressesProvider{
+  function getAddress(bytes32 id) external view returns (address);
+}
+
+interface IProtocolProvider {
+    function getReserveConfigurationData(address token) external view returns (
+      uint256 decimals,
+      uint256 ltv,
+      uint256 liquidationThreshold,
+      uint256 liquidationBonus,
+      uint256 reserveFactor,
+      bool usageAsCollateralEnabled,
+      bool borrowingEnabled,
+      bool stableBorrowRateEnabled,
+      bool isActive,
+      bool isFrozen
+    );
+}
 
 contract EarnAPRWithPool is Ownable {
     using SafeMath for uint;
@@ -77,7 +96,7 @@ contract EarnAPRWithPool is Ownable {
         _fulcrum = IAPRWithPoolOracle(APR).getFulcrumAPRAdjusted(addr, 0);
       }
       addr = _token;
-      if (addr != address(0)) {
+      if (getActiveTokenInAave(addr)) {
         _aave = IAPRWithPoolOracle(APR).getAaveAPRAdjusted(addr);
       }
       addr = fortube[_token];
@@ -110,5 +129,13 @@ contract EarnAPRWithPool is Ownable {
 
     function set_new_APR(address _new_APR) public onlyOwner {
         APR = _new_APR;
+    }
+
+    function getActiveTokenInAave(address token) public view returns (bool isActive){
+      address LendingPoolAddressesProvider = IAPRWithPoolOracle(APR).AAVE();
+      address protocolProvider = ILendingPoolAddressesProvider(LendingPoolAddressesProvider).getAddress('0x1');
+      IProtocolProvider provider = IProtocolProvider(protocolProvider);
+      (,,,,,,,, isActive,) = provider.getReserveConfigurationData(token);
+      return isActive;
     }
 }
