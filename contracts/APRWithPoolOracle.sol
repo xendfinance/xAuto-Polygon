@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./libraries/Ownable.sol";
 
 // Fulcrum
@@ -39,15 +40,19 @@ contract Structs {
   }
 }
 
-contract APRWithPoolOracle is Ownable, Structs {
+contract APRWithPoolOracle is Ownable, Structs, Initializable {
   using SafeMath for uint256;
   using Address for address;
 
   uint256 DECIMAL = 10 ** 18;
-  address immutable public AAVE;
+  address public AAVE;
 
   constructor() public {
-    AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+    // AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+  }
+
+  function initialize(address _AAVE) public initializer{
+    AAVE = _AAVE;
   }
 
   function getFulcrumAPRAdjusted(address token, uint256 _supply) public view returns(uint256) {

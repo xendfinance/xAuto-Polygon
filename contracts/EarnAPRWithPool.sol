@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./libraries/Ownable.sol";
 
 interface IAPRWithPoolOracle {
@@ -47,7 +48,7 @@ interface IProtocolProvider {
     );
 }
 
-contract EarnAPRWithPool is Ownable {
+contract EarnAPRWithPool is Ownable, Initializable {
     using SafeMath for uint;
     using Address for address;
 
@@ -57,9 +58,12 @@ contract EarnAPRWithPool is Ownable {
 
     address public APR;
 
-    constructor() public {
-        APR = address(0x0bCf5B3603fe34428Ac460C52674F12517d7C9aE);
+    constructor() public {}
 
+    function initialize(
+      address _apr
+    ) public initializer{
+        APR = _apr;
         addFToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270, 0x949cc03E43C24A954BAa963A00bfC5ab146c6CE7); //fMATIC
         addFToken(0xc2132D05D31c914a87C6611C10748AEb04B58e8F, 0x18D755c981A550B0b8919F1De2CDF882f489c155); //fUSDT
         addFToken(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, 0x2E1A74a16e3a9F8e3d825902Ab9fb87c606cB13f); //fUSDC
@@ -70,7 +74,6 @@ contract EarnAPRWithPool is Ownable {
         addFTToken(0xc2132D05D31c914a87C6611C10748AEb04B58e8F, 0xE2272A850188B43E94eD6DF5b75f1a2FDcd5aC26); //ftUSDT
         addFTToken(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, 0xf330b39f74e7f71ab9604A5307690872b8125aC8); //ftUSDC
         addFTToken(0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6, 0x57160962Dc107C8FBC2A619aCA43F79Fd03E7556); //ftWBTC
-        
     }
 
     // Wrapper for legacy v1 token support
