@@ -47,12 +47,10 @@ contract APRWithPoolOracle is Ownable, Structs, Initializable {
   uint256 DECIMAL = 10 ** 18;
   address public AAVE;
 
-  constructor() public {
-    // AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
-  }
+  constructor() public {}
 
-  function initialize(address _AAVE) public initializer{
-    AAVE = _AAVE;
+  function initialize() public initializer{
+    AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
   }
 
   function getFulcrumAPRAdjusted(address token, uint256 _supply) public view returns(uint256) {

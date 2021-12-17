@@ -58,33 +58,27 @@ contract xAAVE is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
   string private _symbol;
   uint8 private _decimals;
 
-  constructor () public {
-    // token = address(0xD6DF932A45C0f255f85145f286eA0b292B21C90B);
-    // apr = address(0xdD6d648C991f7d47454354f4Ef326b04025a48A8);
-    // aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
-    // fulcrum = address(0xf009c28b2D9E13886105714B895f013E2e43EE12);
-    // aaveToken = address(0x1d2a0E5EC8E5bBDCA5CB219e649B565d8e5c3360);
-    // feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
-  }
+  constructor () public {}
 
   function initialize(
-    address _token, address _apr, address _aave, address _fulcrum, address _aaveToken,address _feeAddress
+    address _apr
   ) public initializer{
+    apr = _apr;
     _name = "xend AAVE";
     _symbol = "xAAVE";
-    token = _token;
-    apr = _apr;
-    aave = _aave;
-    aaveToken = _aaveToken;
-    fulcrum = _fulcrum;
-    feeAddress = _feeAddress;
+    token = address(0xD6DF932A45C0f255f85145f286eA0b292B21C90B);
+    aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
+    fulcrum = address(0);
+    ReserveData memory reserve = Aave(getAave()).getReserveData(token);
+    aaveToken = reserve.aTokenAddress;
     feeAmount = 0;
     feePrecision = 1000;
-    approveToken();
     lenderStatus[Lender.AAVE] = true;
     lenderStatus[Lender.FULCRUM] = false;
     withdrawable[Lender.AAVE] = true;
     withdrawable[Lender.FULCRUM] = false;
+    approveToken();
   }
 
   // Ownable setters incase of support in future for these systems
@@ -200,8 +194,12 @@ contract xAAVE is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
   }
 
   function approveToken() public {
+    if(lenderStatus[Lender.AAVE]){
       IERC20(token).approve(getAave(), uint(-1));
+    }
+    if(lenderStatus[Lender.FULCRUM]){
       IERC20(token).approve(fulcrum, uint(-1));
+    }
   }
 
   function balanceFulcrumInToken() external view returns (uint256) {
