@@ -62,39 +62,31 @@ contract xUSDT is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
   string private _symbol;
   uint8 private _decimals;
 
-  constructor () public {
-    // token = address(0xc2132D05D31c914a87C6611C10748AEb04B58e8F);
-    // apr = address(0x3a286653ae8EF3C35eE4849f57aF615eDA7d79ac);
-    // aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
-    // fulcrum = address(0x18D755c981A550B0b8919F1De2CDF882f489c155);
-    // aaveToken = address(0x60D55F02A771d515e077c9C2403a1ef324885CeC);
-    // fortubeToken = address(0xE2272A850188B43E94eD6DF5b75f1a2FDcd5aC26);
-    // fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-    // feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
-  }
+  constructor () public {}
 
   function initialize(
-    address _token, address _apr, address _aave, address _fulcrum, address _aaveToken, address _fortubeToken, address _fortubeBank, address _feeAddress
+    address _apr
   ) public initializer{
+    apr = _apr;
     _name = "xend USDT";
     _symbol = "xUSDT";
-    token = _token;
-    apr = _apr;
-    aave = _aave;
-    aaveToken = _aaveToken;
-    fulcrum = _fulcrum;
-    fortubeToken = _fortubeToken;
-    fortubeBank = _fortubeBank;
-    feeAddress = _feeAddress;
+    token = address(0xc2132D05D31c914a87C6611C10748AEb04B58e8F);
+    aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
+    fulcrum = address(0x5BFAC8a40782398fb662A69bac8a89e6EDc574b1);
+    fortubeToken = address(0xE2272A850188B43E94eD6DF5b75f1a2FDcd5aC26);
+    fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
+    ReserveData memory reserve = Aave(getAave()).getReserveData(token);
+    aaveToken = reserve.aTokenAddress;
     feeAmount = 0;
     feePrecision = 1000;
-    approveToken();
     lenderStatus[Lender.AAVE] = true;
     lenderStatus[Lender.FULCRUM] = false;
     lenderStatus[Lender.FORTUBE] = true;
     withdrawable[Lender.AAVE] = true;
     withdrawable[Lender.FULCRUM] = false;
     withdrawable[Lender.FORTUBE] = true;
+    approveToken();
   }
 
   function set_new_APR(address _new_APR) public onlyOwner {

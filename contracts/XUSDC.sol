@@ -63,39 +63,31 @@ contract xUSDC is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
   string private _symbol;
   uint8 private _decimals;
 
-  constructor () public {
-    // token = address(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
-    // apr = address(0xdD6d648C991f7d47454354f4Ef326b04025a48A8);
-    // aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
-    // fulcrum = address(0x2E1A74a16e3a9F8e3d825902Ab9fb87c606cB13f);
-    // aaveToken = address(0x1a13F4Ca1d028320A707D99520AbFefca3998b7F);
-    // fortubeToken = address(0xf330b39f74e7f71ab9604A5307690872b8125aC8);
-    // fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
-    // feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
-  }
+  constructor () public {}
 
   function initialize(
-    address _token, address _apr, address _aave, address _fulcrum, address _aaveToken, address _fortubeToken, address _fortubeBank, address _feeAddress
+    address _apr
   ) public initializer{
+    apr = _apr;
     _name = "xend USDC";
     _symbol = "xUSDC";
-    token = _token;
-    apr = _apr;
-    aave = _aave;
-    aaveToken = _aaveToken;
-    fulcrum = _fulcrum;
-    fortubeToken = _fortubeToken;
-    fortubeBank = _fortubeBank;
-    feeAddress = _feeAddress;
+    token = address(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
+    aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
+    fulcrum = address(0xC3f6816C860e7d7893508C8F8568d5AF190f6d7d);
+    fortubeToken = address(0xf330b39f74e7f71ab9604A5307690872b8125aC8);
+    fortubeBank = address(0x170371bbcfFf200bFB90333e799B9631A7680Cc5);
+    ReserveData memory reserve = Aave(getAave()).getReserveData(token);
+    aaveToken = reserve.aTokenAddress;
     feeAmount = 0;
     feePrecision = 1000;
-    approveToken();
     lenderStatus[Lender.AAVE] = true;
     lenderStatus[Lender.FULCRUM] = false;
     lenderStatus[Lender.FORTUBE] = true;
     withdrawable[Lender.AAVE] = true;
     withdrawable[Lender.FULCRUM] = false;
     withdrawable[Lender.FORTUBE] = true;
+    approveToken();
   }
 
   // Ownable setters incase of support in future for these systems

@@ -37,9 +37,11 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         
         let xwbtc = this.xwbtcContract
 
+        await this.aprWithPoolOracle.initialize();
+
         // let statbleTokenAddress = await this.xwbtcContract.token();
-        await this.earnAPRWithPool.set_new_APR(this.aprWithPoolOracle.address)
-        await this.xwbtcContract.set_new_APR(this.earnAPRWithPool.address)
+        await this.earnAPRWithPool.initialize(this.aprWithPoolOracle.address)
+        await this.xwbtcContract.initialize(this.earnAPRWithPool.address)
         // await this.earnAPRWithPool.addXToken(statbleTokenAddress, this.xwbtcContract.address);
 
         // await wbtcContract.methods.approve(xwbtc.address, 10000000000).send({
