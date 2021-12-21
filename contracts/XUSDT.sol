@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
@@ -81,10 +80,10 @@ contract xUSDT is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
     feeAmount = 0;
     feePrecision = 1000;
     lenderStatus[Lender.AAVE] = true;
-    lenderStatus[Lender.FULCRUM] = false;
+    lenderStatus[Lender.FULCRUM] = true;
     lenderStatus[Lender.FORTUBE] = true;
     withdrawable[Lender.AAVE] = true;
-    withdrawable[Lender.FULCRUM] = false;
+    withdrawable[Lender.FULCRUM] = true;
     withdrawable[Lender.FORTUBE] = true;
     approveToken();
   }
@@ -129,8 +128,6 @@ contract xUSDT is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
       _mint(msg.sender, shares);
       depositedAmount[msg.sender] = depositedAmount[msg.sender].add(_amount);
       totalDepositedAmount = totalDepositedAmount.add(_amount);
-      if(lastWithdrawFeeTime == 0)
-        lastWithdrawFeeTime = block.timestamp;
       emit Deposit(msg.sender, _amount);
   }
 
@@ -154,7 +151,7 @@ contract xUSDT is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
       emit Transfer(msg.sender, address(0), _shares);
 
       // Check balance
-      uint256 b = IERC20(token).balanceOf(address(this));
+      uint256 b = _balance();
       if (b < r) {
         _withdrawSome(r.sub(b));
       }
@@ -323,7 +320,7 @@ contract xUSDT is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
       _withdrawAll();
     }
 
-    if (_balance() > 0) {
+    if (_balance() > 1) {
       if (newProvider == Lender.FULCRUM) {
         supplyFulcrum(_balance());
       } else if (newProvider == Lender.AAVE) {
