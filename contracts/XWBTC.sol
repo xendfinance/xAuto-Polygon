@@ -145,7 +145,7 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
       // Could have over value from xTokens
       pool = _calcPoolValueInToken();
       // Calc to redeem before updating balances
-      uint256 fee = pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision);
+      uint256 fee = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision) : 0;
       // uint256 fee = 0;
       uint256 r = (pool.sub(fee).mul(_shares)).div(totalSupply());
 
@@ -386,7 +386,7 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
   
   function withdrawFee() public {
     pool = _calcPoolValueInToken();
-    uint256 amount = pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision).mul(block.timestamp.sub(lastWithdrawFeeTime)).div(365 * 24 * 60 * 60);
+    uint256 amount = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision).mul(block.timestamp.sub(lastWithdrawFeeTime)).div(365 * 24 * 60 * 60): 0;
     if(amount > 0){
       _withdrawSome(amount);
       IERC20(token).approve(feeAddress, amount);
