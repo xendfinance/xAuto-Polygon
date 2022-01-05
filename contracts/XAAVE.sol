@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./libraries/Ownable.sol";
 import './libraries/TokenStructs.sol';
 import './interfaces/Aave.sol';
@@ -17,7 +17,7 @@ import './interfaces/IIEarnManager.sol';
 import './interfaces/LendingPoolAddressesProvider.sol';
 import './interfaces/ITreasury.sol';
 
-contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
+contract xAAVE is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initializable {
   using SafeERC20 for IERC20;
   using Address for address;
   using SafeMath for uint256;
@@ -31,6 +31,8 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   address public feeAddress;
   uint256 public feeAmount;
   uint256 public feePrecision;
+  uint256 private lastWithdrawFeeTime;
+  uint256 public totalDepositedAmount;
 
   mapping (address => uint256) depositedAmount;
 
@@ -39,18 +41,42 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       AAVE,
       FULCRUM
   }
+  
+  mapping (Lender => bool) public lenderStatus;
+  mapping (Lender => bool) public withdrawable;
 
   Lender public provider = Lender.NONE;
 
-  constructor () public ERC20("xend AAVE", "xAAVE") {
+  mapping (address => uint256) private _balances;
+
+  mapping (address => mapping (address => uint256)) private _allowances;
+
+  uint256 private _totalSupply;
+
+  string private _name;
+  string private _symbol;
+  uint8 private _decimals;
+
+  constructor () public {}
+
+  function initialize(
+    address _apr
+  ) public initializer{
+    apr = _apr;
+    _name = "xend AAVE";
+    _symbol = "xAAVE";
     token = address(0xD6DF932A45C0f255f85145f286eA0b292B21C90B);
-    apr = address(0xdD6d648C991f7d47454354f4Ef326b04025a48A8);
     aave = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
-    fulcrum = address(0xf009c28b2D9E13886105714B895f013E2e43EE12);
-    aaveToken = address(0x1d2a0E5EC8E5bBDCA5CB219e649B565d8e5c3360);
-    feeAddress = address(0xfa4002f80A366d1829Be3160Ac7f5802dE5EEAf4);
+    feeAddress = address(0x9D42c2F50D5e8868B1f11a403f090b8a8b698dbE);
+    fulcrum = address(0);
+    ReserveData memory reserve = Aave(getAave()).getReserveData(token);
+    aaveToken = reserve.aTokenAddress;
     feeAmount = 0;
     feePrecision = 1000;
+    lenderStatus[Lender.AAVE] = true;
+    lenderStatus[Lender.FULCRUM] = false;
+    withdrawable[Lender.AAVE] = true;
+    withdrawable[Lender.FULCRUM] = false;
     approveToken();
   }
 
@@ -66,7 +92,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       feeAddress = _new_fee_address;
   }
   function set_new_feePrecision(uint256 _newFeePrecision) public onlyOwner{
-    assert(_newFeePrecision >= 100);
+    require(_newFeePrecision >= 100, "fee precision must be greater than 100 at least");
     set_new_feeAmount(feeAmount*_newFeePrecision/feePrecision);
     feePrecision = _newFeePrecision;
   }
@@ -94,6 +120,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       pool = _calcPoolValueInToken();
       _mint(msg.sender, shares);
       depositedAmount[msg.sender] = depositedAmount[msg.sender].add(_amount);
+      totalDepositedAmount = totalDepositedAmount.add(_amount);
       emit Deposit(msg.sender, _amount);
   }
 
@@ -109,31 +136,23 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
       // Could have over value from xTokens
       pool = _calcPoolValueInToken();
-      uint256 i = (pool.mul(ibalance)).div(totalSupply());
       // Calc to redeem before updating balances
-      uint256 r = (pool.mul(_shares)).div(totalSupply());
-      if(i < depositedAmount[msg.sender]){
-        i = i.add(1);
-        r = r.add(1);
-      }
-      uint256 profit = (i.sub(depositedAmount[msg.sender])).mul(_shares.div(depositedAmount[msg.sender]));      
+      uint256 fee = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision) : 0;
+      // uint256 fee = 0;
+      uint256 r = (pool.sub(fee).mul(_shares)).div(totalSupply());
 
       emit Transfer(msg.sender, address(0), _shares);
 
       // Check balance
-      uint256 b = IERC20(token).balanceOf(address(this));
+      uint256 b = _balance();
       if (b < r) {
         _withdrawSome(r.sub(b));
       }
-
-      uint256 fee = profit.mul(feeAmount).div(feePrecision);
-      if(fee > 0){
-        IERC20(token).approve(feeAddress, fee);
-        ITreasury(feeAddress).depositToken(token);
-      }
-      IERC20(token).safeTransfer(msg.sender, r.sub(fee));
-      _burn(msg.sender, _shares);
+      
+      IERC20(token).safeTransfer(msg.sender, r);
+      totalDepositedAmount = totalDepositedAmount.sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
       depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
+      _burn(msg.sender, _shares);
       rebalance();
       pool = _calcPoolValueInToken();
       emit Withdraw(msg.sender, _shares);
@@ -144,10 +163,10 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   function recommend() public view returns (Lender) {
     (, uint256 fapr, uint256 aapr, ) = IIEarnManager(apr).recommend(token);
     uint256 max = 0;
-    if (fapr > max) {
+    if (fapr > max && lenderStatus[Lender.FULCRUM]) {
       max = fapr;
     }
-    if (aapr > max) {
+    if (aapr > max && lenderStatus[Lender.AAVE]) {
       max = aapr;
     }
     Lender newProvider = Lender.NONE;
@@ -159,8 +178,8 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
     return newProvider;
   }
 
-  function balance() public view returns (uint256) {
-    return IERC20(token).balanceOf(address(this));
+  function balance() external view returns (uint256) {
+    return _balance();
   }
 
   function getAave() public view returns (address) {
@@ -172,22 +191,22 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
 
   function approveToken() public {
+    if(lenderStatus[Lender.AAVE]){
       IERC20(token).approve(getAave(), uint(-1));
+    }
+    if(lenderStatus[Lender.FULCRUM]){
       IERC20(token).approve(fulcrum, uint(-1));
+    }
   }
 
-  function balanceFulcrumInToken() public view returns (uint256) {
-    uint256 b = balanceFulcrum();
-    if (b > 0) {
-      b = Fulcrum(fulcrum).assetBalanceOf(address(this));
-    }
-    return b;
+  function balanceFulcrumInToken() external view returns (uint256) {
+    return _balanceFulcrumInToken();
   }
-  function balanceFulcrum() public view returns (uint256) {
-    return IERC20(fulcrum).balanceOf(address(this));
+  function balanceFulcrum() external view returns (uint256) {
+    return _balanceFulcrum();
   }
-  function balanceAave() public view returns (uint256) {
-    return IERC20(aaveToken).balanceOf(address(this));
+  function balanceAave() external view returns (uint256) {
+    return _balanceAave();
   }
 
   function _balance() internal view returns (uint256) {
@@ -195,18 +214,24 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
 
   function _balanceFulcrumInToken() internal view returns (uint256) {
-    uint256 b = balanceFulcrum();
-    if (b > 0) {
+    uint256 b = _balanceFulcrum();
+    if (b > 0 && withdrawable[Lender.FULCRUM]) {
       b = Fulcrum(fulcrum).assetBalanceOf(address(this));
     }
     return b;
   }
 
   function _balanceFulcrum() internal view returns (uint256) {
-    return IERC20(fulcrum).balanceOf(address(this));
+    if(withdrawable[Lender.FULCRUM])
+      return IERC20(fulcrum).balanceOf(address(this));
+    else
+      return 0;
   }
   function _balanceAave() internal view returns (uint256) {
-    return IERC20(aaveToken).balanceOf(address(this));
+    if(withdrawable[Lender.AAVE])
+      return IERC20(aaveToken).balanceOf(address(this));
+    else
+      return 0;
   }
 
   function _withdrawAll() internal {
@@ -221,9 +246,9 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
   }
 
   function _withdrawSomeFulcrum(uint256 _amount) internal {
-    uint256 b = balanceFulcrum();
+    uint256 b = _balanceFulcrum();
     // Balance of token in fulcrum
-    uint256 bT = balanceFulcrumInToken();
+    uint256 bT = _balanceFulcrumInToken();
     require(bT >= _amount, "insufficient funds");
     // can have unintentional rounding errors
     uint256 amount = (b.mul(_amount)).div(bT).add(1);
@@ -232,7 +257,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
 
   function _withdrawSome(uint256 _amount) internal {
     if (provider == Lender.AAVE) {
-      require(balanceAave() >= _amount, "insufficient funds");
+      require(_balanceAave() >= _amount, "insufficient funds");
       _withdrawAave(_amount);
     }
     if (provider == Lender.FULCRUM) {
@@ -247,19 +272,6 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       _withdrawAll();
     }
 
-    if (balance() > 0) {
-      if (newProvider == Lender.FULCRUM) {
-        supplyFulcrum(balance());
-      } else if (newProvider == Lender.AAVE) {
-        supplyAave(balance());
-      }
-    }
-
-    provider = newProvider;
-  }
-
-  // Internal only rebalance for better gas in redeem
-  function _rebalance(Lender newProvider) internal {
     if (_balance() > 0) {
       if (newProvider == Lender.FULCRUM) {
         supplyFulcrum(_balance());
@@ -267,6 +279,7 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
         supplyAave(_balance());
       }
     }
+
     provider = newProvider;
   }
 
@@ -290,15 +303,135 @@ contract xAAVE is ERC20, ReentrancyGuard, Ownable, TokenStructs {
       .add(_balance());
   }
 
-  function calcPoolValueInToken() public view returns (uint) {
-
-    return balanceFulcrumInToken()
-      .add(balanceAave())
-      .add(balance());
+  function calcPoolValueInToken() external view returns (uint) {
+    return _calcPoolValueInToken();
   }
 
   function getPricePerFullShare() public view returns (uint) {
-    uint _pool = calcPoolValueInToken();
+    uint _pool = _calcPoolValueInToken();
     return _pool.mul(1e18).div(totalSupply());
   }
+
+  function activateLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = true;
+    withdrawable[lender] = true;
+    rebalance();
+  }
+
+  function deactivateWithdrawableLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = false;
+    rebalance();
+  }
+
+  function deactivateNonWithdrawableLender(Lender lender) public onlyOwner {
+    lenderStatus[lender] = false;
+    withdrawable[lender] = false;
+    rebalance();
+  }
+
+  function withdrawFee() public {
+    pool = _calcPoolValueInToken();
+    uint256 amount = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision).mul(block.timestamp.sub(lastWithdrawFeeTime)).div(365 * 24 * 60 * 60): 0;
+    if(amount > 0){
+      _withdrawSome(amount);
+      IERC20(token).approve(feeAddress, amount);
+      ITreasury(feeAddress).depositToken(token);
+      lastWithdrawFeeTime = block.timestamp;
+    }    
+  }
+
+    function name() public view virtual returns (string memory) {
+        return _name;
+    }
+    
+    function symbol() public view virtual returns (string memory) {
+        return _symbol;
+    }
+    
+    function decimals() public view virtual returns (uint8) {
+        return _decimals;
+    }
+    
+    function totalSupply() public view virtual override returns (uint256) {
+        return _totalSupply;
+    }
+    
+    function balanceOf(address account) public view virtual override returns (uint256) {
+        return _balances[account];
+    }
+    
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(_msgSender(), recipient, amount);
+        return true;
+    }
+    
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+    
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        _approve(_msgSender(), spender, amount);
+        return true;
+    }
+    
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        return true;
+    }
+    
+    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
+        return true;
+    }
+    
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        return true;
+    }
+    
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+
+        _beforeTokenTransfer(sender, recipient, amount);
+
+        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[recipient] = _balances[recipient].add(amount);
+        emit Transfer(sender, recipient, amount);
+    }
+    
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: mint to the zero address");
+
+        _beforeTokenTransfer(address(0), account, amount);
+
+        _totalSupply = _totalSupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
+        emit Transfer(address(0), account, amount);
+    }
+    
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: burn from the zero address");
+
+        _beforeTokenTransfer(account, address(0), amount);
+
+        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
+        _totalSupply = _totalSupply.sub(amount);
+        emit Transfer(account, address(0), amount);
+    }
+    
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+    
+    function _setupDecimals(uint8 decimals_) internal virtual {
+        _decimals = decimals_;
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }

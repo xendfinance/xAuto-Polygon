@@ -29,17 +29,19 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         const forceSend = await ForceSend.new();
         await forceSend.go(aaveOwner, { value: ether('1') });
         
-        await aaveContract.methods.transfer(alice, '10000000000').send({ from: aaveOwner});
-        await aaveContract.methods.transfer(admin, '10000000000').send({ from: aaveOwner});
-        await aaveContract.methods.transfer(bob, '10000000000').send({ from: aaveOwner});
-        await aaveContract.methods.transfer(minter, '10000000000').send({ from: aaveOwner});
-        await aaveContract.methods.transfer(dev, '10000000000').send({ from: aaveOwner});
+        await aaveContract.methods.transfer(alice, '10000000000000000000').send({ from: aaveOwner});
+        await aaveContract.methods.transfer(admin, '10000000000000000000').send({ from: aaveOwner});
+        await aaveContract.methods.transfer(bob, '10000000000000000000').send({ from: aaveOwner});
+        await aaveContract.methods.transfer(minter, '10000000000000000000').send({ from: aaveOwner});
+        await aaveContract.methods.transfer(dev, '10000000000000000000').send({ from: aaveOwner});
         
         let xaave = this.xaaveContract
 
+        await this.aprWithPoolOracle.initialize();
+
         // let statbleTokenAddress = await this.xaaveContract.token();
-        await this.earnAPRWithPool.set_new_APR(this.aprWithPoolOracle.address)
-        await this.xaaveContract.set_new_APR(this.earnAPRWithPool.address)
+        await this.earnAPRWithPool.initialize(this.aprWithPoolOracle.address)
+        await this.xaaveContract.initialize(this.earnAPRWithPool.address)
         // await this.earnAPRWithPool.addXToken(statbleTokenAddress, this.xaaveContract.address);
 
         // await aaveContract.methods.approve(xaave.address, 10000000000).send({
@@ -54,56 +56,104 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         //     from: admin
         // });
 
-        await aaveContract.methods.transfer(xaave.address, 10000).send({
-            from: admin
-        });
+       
 
     });
 
     it('test withdraw', async() => {
         // let xaave = await XAAVE.deployed();
-        let xaave = this.xaaveContract;     
-        await aaveContract.methods.approve(xaave.address, 100000).send({
+        let xaave = this.xaaveContract;
+        fee_address = await xaave.feeAddress();
+        await xaave.set_new_feeAmount(10);
+
+        await aaveContract.methods.approve(xaave.address, '8000000000000000000').send({
             from: admin
         }); 
-        await aaveContract.methods.approve(xaave.address, 10000000).send({
+        await aaveContract.methods.approve(xaave.address, '5000000000000000000').send({
             from: alice
         });
 
-        await aaveContract.methods.approve(xaave.address, 48457).send({
+        await aaveContract.methods.approve(xaave.address, '10000000000000000000').send({
             from: dev
         }); 
-        await aaveContract.methods.approve(xaave.address, 1000).send({
+        await aaveContract.methods.approve(xaave.address, '10000000000000000000').send({
             from: minter
         });
 
-        await aaveContract.methods.approve(xaave.address, 458937489).send({
+        await aaveContract.methods.approve(xaave.address, '2000000000000000000').send({
             from: bob
         });
 
-        await xaave.deposit(100000, {from: admin});
-        await xaave.deposit(48457, {from: dev});
-        await xaave.deposit(1000, {from: minter});
-        await xaave.deposit(458937489, {from: bob});
-        await xaave.deposit(10000000, {from: alice});
-
-
-        fee_address = '0x67926b0C4753c42b31289C035F8A656D800cD9e7'
-        xaave.set_new_fee_address(fee_address);
-        console.log('before_xaave_balance',await xaave.balance());
+        // console.log('before_xaave_balance',await xaave.balance());
+        console.log('before_xaave_balance',await aaveContract.methods.balanceOf(xaave.address).call());
         console.log('before_alice_balance',await aaveContract.methods.balanceOf(alice).call());
+        console.log('before_admin_balance',await aaveContract.methods.balanceOf(admin).call());
+        console.log('before_dev_balance',await aaveContract.methods.balanceOf(dev).call());
+        console.log('before_minter_balance',await aaveContract.methods.balanceOf(minter).call());
+        console.log('before_bob_balance',await aaveContract.methods.balanceOf(bob).call());
+
+        await xaave.deposit('8000000000000000000', {from: admin});
+        await xaave.deposit('10000000000000000000', {from: dev});
+        await xaave.deposit('5000000000000000000', {from: alice});
+        await aaveContract.methods.transfer(xaave.address, 500000).send({
+            from: admin
+        });
+
+        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
+        await xaave.withdrawFee({from : alice});
+        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
+
+        await xaave.deposit('10000000000000000000', {from: minter});
+        await xaave.deposit('2000000000000000000', {from: bob});
+
+        
         // await xaave.supplyAave(1000);
         // let aave_balance = await xaave.balanceAave();
         // console.log('before_aave_balance', aave_balance.toString());
         // console.log('xaave_balance',await xaave.balance());
         let tokenAmount = await xaave.balanceOf(alice);
-        console.log('------------', tokenAmount.toString());
+        // console.log('alice------------', tokenAmount.toString());
         await xaave.rebalance();
         let provider = await xaave.provider();
         console.log('provider',provider.toString());
-        await xaave.withdraw(tokenAmount.toString());
-        console.log('after_xaave_balance',await xaave.balance());
+        // await xaave.withdraw(1000000);
+        tokenAmount = await xaave.balanceOf(alice);
+        console.log('alice------------', tokenAmount.toString());
+        await xaave.withdraw(tokenAmount.toString(), {from: alice});
+        
+        tokenAmount = await xaave.balanceOf(admin);
+        console.log('admin------------', tokenAmount.toString());
+        await xaave.withdraw(tokenAmount.toString(), {from: admin});
+        
+        tokenAmount = await xaave.balanceOf(dev);
+        console.log('dev------------', tokenAmount.toString());
+        await xaave.withdraw(tokenAmount.toString(), {from: dev});
+        
+        tokenAmount = await xaave.balanceOf(minter);
+        console.log('minter------------', tokenAmount.toString());
+        await xaave.withdraw(tokenAmount.toString(), {from: minter});
+
+        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
+        await xaave.withdrawFee({from : alice});
+        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
+        
+        tokenAmount = await xaave.balanceOf(bob);
+        console.log('bob------------', tokenAmount.toString());
+        await xaave.withdraw(tokenAmount.toString(), {from: bob});
+        
+        console.log('after_xaave_balance',await aaveContract.methods.balanceOf(xaave.address).call());
         console.log('after_alice_balance',await aaveContract.methods.balanceOf(alice).call());
+        console.log('after_admin_balance',await aaveContract.methods.balanceOf(admin).call());
+        console.log('after_dev_balance',await aaveContract.methods.balanceOf(dev).call());
+        console.log('after_minter_balance',await aaveContract.methods.balanceOf(minter).call());
+        console.log('after_bob_balance',await aaveContract.methods.balanceOf(bob).call());
+
+        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
+        await xaave.withdrawFee({from : alice});
         console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
     })
+
+    // function timeout(ms) {
+    //     return new Promise(resolve => setTimeout(resolve, ms));
+    // }
 })
