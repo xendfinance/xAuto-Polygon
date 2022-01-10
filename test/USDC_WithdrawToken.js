@@ -65,10 +65,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         let xusdc = this.xUsdcContract;
         fee_address = await xusdc.feeAddress();
         await xusdc.set_new_feeAmount(10);     
-        await usdcContract.methods.approve(xusdc.address, '8000000').send({
+        await usdcContract.methods.approve(xusdc.address, '10000000').send({
             from: admin
         }); 
-        await usdcContract.methods.approve(xusdc.address, '5000000').send({
+        await usdcContract.methods.approve(xusdc.address, '10000000').send({
             from: alice
         });
 
@@ -79,7 +79,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
             from: minter
         });
 
-        await usdcContract.methods.approve(xusdc.address, '2000000').send({
+        await usdcContract.methods.approve(xusdc.address, '10000000').send({
             from: bob
         });
 
@@ -90,10 +90,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('before_minter_balance',await usdcContract.methods.balanceOf(minter).call());
         console.log('before_bob_balance',await usdcContract.methods.balanceOf(bob).call());
 
-        await xusdc.deposit('8000000', {from: admin});
-        await xusdc.deposit('10000000', {from: dev});
-        await xusdc.deposit('10000000', {from: minter});
-        await usdcContract.methods.transfer(xusdc.address, 500000).send({
+        await xusdc.deposit('2000000', {from: admin});
+        await xusdc.deposit('2000000', {from: dev});
+        await xusdc.deposit('2000000', {from: minter});
+        await usdcContract.methods.transfer(xusdc.address, '1000000').send({
             from: admin
         });
 
@@ -102,7 +102,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('fee_address_balance', await usdcContract.methods.balanceOf(fee_address).call());
 
         await xusdc.deposit('2000000', {from: bob});
-        await xusdc.deposit('5000000', {from: alice});
+        await xusdc.deposit('2000000', {from: alice});
 
 
         // await xusdc.supplyUsdc(1000);

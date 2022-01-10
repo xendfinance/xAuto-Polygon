@@ -66,10 +66,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         fee_address = await xaave.feeAddress();
         await xaave.set_new_feeAmount(10);
 
-        await aaveContract.methods.approve(xaave.address, '8000000000000000000').send({
+        await aaveContract.methods.approve(xaave.address, '10000000000000000000').send({
             from: admin
         }); 
-        await aaveContract.methods.approve(xaave.address, '5000000000000000000').send({
+        await aaveContract.methods.approve(xaave.address, '10000000000000000000').send({
             from: alice
         });
 
@@ -80,7 +80,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
             from: minter
         });
 
-        await aaveContract.methods.approve(xaave.address, '2000000000000000000').send({
+        await aaveContract.methods.approve(xaave.address, '10000000000000000000').send({
             from: bob
         });
 
@@ -92,10 +92,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('before_minter_balance',await aaveContract.methods.balanceOf(minter).call());
         console.log('before_bob_balance',await aaveContract.methods.balanceOf(bob).call());
 
-        await xaave.deposit('8000000000000000000', {from: admin});
-        await xaave.deposit('10000000000000000000', {from: dev});
-        await xaave.deposit('5000000000000000000', {from: alice});
-        await aaveContract.methods.transfer(xaave.address, 500000).send({
+        await xaave.deposit('2000000000000000000', {from: admin});
+        await xaave.deposit('2000000000000000000', {from: dev});
+        await xaave.deposit('2000000000000000000', {from: alice});
+        await aaveContract.methods.transfer(xaave.address, '1000000000000000000').send({
             from: admin
         });
 
@@ -103,7 +103,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         await xaave.withdrawFee({from : alice});
         console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
 
-        await xaave.deposit('10000000000000000000', {from: minter});
+        await xaave.deposit('2000000000000000000', {from: minter});
         await xaave.deposit('2000000000000000000', {from: bob});
 
         

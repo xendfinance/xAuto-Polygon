@@ -65,10 +65,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         let xwbtc = this.xwbtcContract;   
         fee_address = await xwbtc.feeAddress();
         await xwbtc.set_new_feeAmount(10);        
-        await wbtcContract.methods.approve(xwbtc.address, '800000000').send({
+        await wbtcContract.methods.approve(xwbtc.address, '1000000000').send({
             from: admin
         }); 
-        await wbtcContract.methods.approve(xwbtc.address, '500000000').send({
+        await wbtcContract.methods.approve(xwbtc.address, '1000000000').send({
             from: alice
         });
 
@@ -90,10 +90,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('before_minter_balance',await wbtcContract.methods.balanceOf(minter).call());
         console.log('before_bob_balance',await wbtcContract.methods.balanceOf(bob).call());
 
-        await xwbtc.deposit('800000000', {from: admin});
-        await xwbtc.deposit('1000000000', {from: dev});
-        await xwbtc.deposit('1000000000', {from: minter});
-        await wbtcContract.methods.transfer(xwbtc.address, 50000000).send({
+        await xwbtc.deposit('200000000', {from: admin});
+        await xwbtc.deposit('200000000', {from: dev});
+        await xwbtc.deposit('200000000', {from: minter});
+        await wbtcContract.methods.transfer(xwbtc.address, '100000000').send({
             from: admin
         });
 
@@ -102,7 +102,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
 
         await xwbtc.deposit('200000000', {from: bob});
-        await xwbtc.deposit('500000000', {from: alice});
+        await xwbtc.deposit('200000000', {from: alice});
 
 
         // await xwbtc.supplyUsdc(1000);

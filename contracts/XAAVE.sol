@@ -114,7 +114,8 @@ contract xAAVE is Context, IERC20, ReentrancyGuard, Ownable, TokenStructs, Initi
         if (totalSupply() == 0) {
           shares = _amount;
         } else {
-          shares = (_amount.mul(totalSupply())).div(pool);
+          uint256 fee = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision) : 0;
+          shares = (_amount.mul(totalSupply())).div(pool.sub(fee));
         }
       }
       pool = _calcPoolValueInToken();
