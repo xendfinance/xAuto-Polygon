@@ -2,11 +2,9 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
-import "./libraries/Ownable.sol";
 
 interface IAPRWithPoolOracle {
 
@@ -48,9 +46,14 @@ interface IProtocolProvider {
     );
 }
 
-contract EarnAPRWithPool is Ownable, Initializable {
+contract EarnAPRWithPool is Context, Initializable {
     using SafeMath for uint;
     using Address for address;
+
+    address private _owner;
+    address private _candidate;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     mapping(address => uint256) public pools;
     mapping(address => address) public fulcrum;
@@ -63,6 +66,9 @@ contract EarnAPRWithPool is Ownable, Initializable {
     function initialize(
       address _apr
     ) public initializer{
+        address msgSender = _msgSender();
+        _owner = msgSender;
+        emit OwnershipTransferred(address(0), msgSender);
         APR = _apr;
         addFToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270, 0x81B91c9a68b94F88f3DFC4F375f101223dDd5007); //fMATIC
         addFToken(0xc2132D05D31c914a87C6611C10748AEb04B58e8F, 0x5BFAC8a40782398fb662A69bac8a89e6EDc574b1); //fUSDT
@@ -140,5 +146,30 @@ contract EarnAPRWithPool is Ownable, Initializable {
       IProtocolProvider provider = IProtocolProvider(protocolProvider);
       (,,,,,,,, isActive,) = provider.getReserveConfigurationData(token);
       return isActive;
+    }
+
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    function renounceOwnership() public virtual onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _candidate = newOwner;
+    }
+
+    function acceptOwnership() external {
+        require(msg.sender == _candidate, "Ownable: not cadidate");
+        emit OwnershipTransferred(_owner, _candidate);
+        _owner = _candidate;
     }
 }
