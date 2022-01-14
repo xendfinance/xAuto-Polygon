@@ -4,9 +4,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/Context.sol";
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
-import "./libraries/Ownable.sol";
 
 // Fulcrum
 interface IFulcrum {
@@ -40,9 +38,14 @@ contract Structs {
   }
 }
 
-contract APRWithPoolOracle is Ownable, Structs, Initializable {
+contract APRWithPoolOracle is Context, Structs, Initializable {
   using SafeMath for uint256;
   using Address for address;
+
+  address private _owner;
+  address private _candidate;
+
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
   uint256 DECIMAL = 10 ** 18;
   address public AAVE;
@@ -50,6 +53,9 @@ contract APRWithPoolOracle is Ownable, Structs, Initializable {
   constructor() public {}
 
   function initialize() public initializer{
+    address msgSender = _msgSender();
+    _owner = msgSender;
+    emit OwnershipTransferred(address(0), msgSender);
     AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
   }
 
@@ -77,5 +83,30 @@ contract APRWithPoolOracle is Ownable, Structs, Initializable {
       IFortube fortube = IFortube(token);
       return fortube.APY().mul(1e9);    // normalize all apy's of aave, fulcrum, fortube
     }
+  }
+
+  function owner() public view virtual returns (address) {
+      return _owner;
+  }
+
+  modifier onlyOwner() {
+      require(owner() == _msgSender(), "Ownable: caller is not the owner");
+      _;
+  }
+
+  function renounceOwnership() public virtual onlyOwner {
+      emit OwnershipTransferred(_owner, address(0));
+      _owner = address(0);
+  }
+
+  function transferOwnership(address newOwner) public virtual onlyOwner {
+      require(newOwner != address(0), "Ownable: new owner is the zero address");
+      _candidate = newOwner;
+  }
+
+  function acceptOwnership() external {
+      require(msg.sender == _candidate, "Ownable: not cadidate");
+      emit OwnershipTransferred(_owner, _candidate);
+      _owner = _candidate;
   }
 }
