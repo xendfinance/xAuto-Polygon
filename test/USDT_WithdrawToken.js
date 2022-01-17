@@ -98,8 +98,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         });
 
         console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
-        await xusdt.withdrawFee({from : alice});
-        console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
 
         await xusdt.deposit('2000000', {from: bob});
         let pool = await xusdt.pool();
@@ -134,8 +132,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         await xusdt.withdraw(tokenAmount.toString(), {from: minter});
 
         console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
-        await xusdt.withdrawFee({from : alice});
-        console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
         
         tokenAmount = await xusdt.balanceOf(bob);
         console.log('bob------------', tokenAmount.toString());
@@ -143,7 +139,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
 
         tokenAmount = await xusdt.balanceOf(alice); 
         console.log('alice------------', tokenAmount.toString());
-        await xusdt.withdraw(tokenAmount.toString(), {from: alice});
+        await xusdt.withdraw((tokenAmount-1).toString(), {from: alice});
         
         console.log('after_xusdt_balance',await usdtContract.methods.balanceOf(xusdt.address).call());
         console.log('after_alice_balance',await usdtContract.methods.balanceOf(alice).call());
@@ -152,8 +148,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('after_minter_balance',await usdtContract.methods.balanceOf(minter).call());
         console.log('after_bob_balance',await usdtContract.methods.balanceOf(bob).call());
 
-        console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
-        await xusdt.withdrawFee({from : alice});
         console.log('fee_address_balance', await usdtContract.methods.balanceOf(fee_address).call());
     })
 })

@@ -100,8 +100,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         });
 
         console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
-        await xaave.withdrawFee({from : alice});
-        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
 
         await xaave.deposit('2000000000000000000', {from: minter});
         await xaave.deposit('2000000000000000000', {from: bob});
@@ -134,12 +132,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         await xaave.withdraw(tokenAmount.toString(), {from: minter});
 
         console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
-        await xaave.withdrawFee({from : alice});
-        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
         
         tokenAmount = await xaave.balanceOf(bob);
         console.log('bob------------', tokenAmount.toString());
-        await xaave.withdraw(tokenAmount.toString(), {from: bob});
+        await xaave.withdraw((tokenAmount).toString(), {from: bob});
         
         console.log('after_xaave_balance',await aaveContract.methods.balanceOf(xaave.address).call());
         console.log('after_alice_balance',await aaveContract.methods.balanceOf(alice).call());
@@ -148,8 +144,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('after_minter_balance',await aaveContract.methods.balanceOf(minter).call());
         console.log('after_bob_balance',await aaveContract.methods.balanceOf(bob).call());
 
-        console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
-        await xaave.withdrawFee({from : alice});
         console.log('fee_address_balance', await aaveContract.methods.balanceOf(fee_address).call());
     })
 
