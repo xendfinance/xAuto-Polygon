@@ -98,8 +98,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         });
 
         console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
-        await xwbtc.withdrawFee({from : alice});
-        console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
 
         await xwbtc.deposit('200000000', {from: bob});
         await xwbtc.deposit('200000000', {from: alice});
@@ -132,12 +130,10 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         await xwbtc.withdraw(tokenAmount.toString(), {from: minter});
 
         console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
-        await xwbtc.withdrawFee({from : alice});
-        console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
         
         tokenAmount = await xwbtc.balanceOf(bob);
         console.log('bob------------', tokenAmount.toString());
-        await xwbtc.withdraw(tokenAmount.toString(), {from: bob});
+        await xwbtc.withdraw((tokenAmount-1).toString(), {from: bob});
 
         console.log('after_xwbtc_balance',await wbtcContract.methods.balanceOf(xwbtc.address).call());
         console.log('after_alice_balance',await wbtcContract.methods.balanceOf(alice).call());
@@ -146,8 +142,6 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
         console.log('after_minter_balance',await wbtcContract.methods.balanceOf(minter).call());
         console.log('after_bob_balance',await wbtcContract.methods.balanceOf(bob).call());
 
-        console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
-        await xwbtc.withdrawFee({from : alice});
         console.log('fee_address_balance', await wbtcContract.methods.balanceOf(fee_address).call());
     })
 })

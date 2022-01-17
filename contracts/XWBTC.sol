@@ -39,10 +39,7 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
   address public feeAddress;
   uint256 public feeAmount;
   uint256 public feePrecision;
-  uint256 private lastWithdrawFeeTime;
-  uint256 public totalDepositedAmount;
-
-  mapping (address => uint256) depositedAmount;
+  uint256 public lastPool;
 
   enum Lender {
       NONE,
@@ -129,14 +126,19 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
         if (totalSupply() == 0) {
           shares = _amount;
         } else {
-          uint256 fee = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision) : 0;
+          uint256 profit = pool.sub(lastPool);
+          uint256 fee = profit.mul(feeAmount).div(feePrecision);
+          if(fee > 0){
+            _withdrawSome(fee);
+            IERC20(token).approve(feeAddress, fee);
+            ITreasury(feeAddress).depositToken(token);
+          }
           shares = (_amount.mul(totalSupply())).div(pool.sub(fee));
         }
       }
       pool = _calcPoolValueInToken();
+      lastPool = pool;
       _mint(msg.sender, shares);
-      depositedAmount[msg.sender] = depositedAmount[msg.sender].add(_amount);
-      totalDepositedAmount = totalDepositedAmount.add(_amount);
       emit Deposit(msg.sender, _amount);
   }
 
@@ -153,8 +155,14 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
       // Could have over value from xTokens
       pool = _calcPoolValueInToken();
       // Calc to redeem before updating balances
-      uint256 fee = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision) : 0;
-      // uint256 fee = 0;
+      uint256 profit = pool.sub(lastPool);
+      uint256 fee = profit.mul(feeAmount).div(feePrecision);
+      if(fee > 0){
+        _withdrawSome(fee);
+        IERC20(token).approve(feeAddress, fee);
+        ITreasury(feeAddress).depositToken(token);
+      }
+      pool = _calcPoolValueInToken();
       uint256 r = (pool.sub(fee).mul(_shares)).div(totalSupply());
 
       emit Transfer(msg.sender, address(0), _shares);
@@ -166,11 +174,10 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
       }
 
       IERC20(token).safeTransfer(msg.sender, r);
-      totalDepositedAmount = totalDepositedAmount.sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
-      depositedAmount[msg.sender] = depositedAmount[msg.sender].sub(_shares.mul(depositedAmount[msg.sender]).div(ibalance));
       _burn(msg.sender, _shares);
       rebalance();
       pool = _calcPoolValueInToken();
+      lastPool = pool;
       emit Withdraw(msg.sender, _shares);
   }
 
@@ -205,10 +212,6 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
 
   function getAave() public view returns (address) {
     return LendingPoolAddressesProvider(aave).getLendingPool();
-  }
-
-  function getDepositedAmount(address investor) public view returns (uint256) {
-    return depositedAmount[investor];
   }
 
   function approveToken() public {
@@ -390,17 +393,6 @@ contract xWBTC is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
     lenderStatus[lender] = false;
     withdrawable[lender] = false;
     rebalance();
-  }
-  
-  function withdrawFee() public {
-    pool = _calcPoolValueInToken();
-    uint256 amount = pool > totalDepositedAmount? pool.sub(totalDepositedAmount).mul(feeAmount).div(feePrecision).mul(block.timestamp.sub(lastWithdrawFeeTime)).div(365 * 24 * 60 * 60): 0;
-    if(amount > 0){
-      _withdrawSome(amount);
-      IERC20(token).approve(feeAddress, amount);
-      ITreasury(feeAddress).depositToken(token);
-      lastWithdrawFeeTime = block.timestamp;
-    }
   }
 
     function name() public view virtual returns (string memory) {
