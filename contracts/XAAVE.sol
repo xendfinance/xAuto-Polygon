@@ -327,6 +327,16 @@ contract xAAVE is Context, IERC20, ReentrancyGuard, TokenStructs, Initializable 
   function activateLender(Lender lender) public onlyOwner {
     lenderStatus[lender] = true;
     withdrawable[lender] = true;
+    if(lender == Lender.AAVE){
+      if(IERC20(token).allowance(getAave(), address(this)) == 0){
+        IERC20(token).approve(getAave(), uint(-1));
+      }
+    }
+    if(lender == Lender.FULCRUM){
+      if(IERC20(token).allowance(fulcrum, address(this)) == 0){
+        IERC20(token).approve(fulcrum, uint(-1));
+      }
+    }
     rebalance();
   }
 

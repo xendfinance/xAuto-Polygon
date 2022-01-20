@@ -62,6 +62,7 @@ contract('test withdraw xtoken', async([alice, bob, admin, dev, minter]) => {
 
     it('test withdraw', async() => {
         // let xaave = await XAAVE.deployed();
+        await this.xaaveContract.activateLender(1);
         let xaave = this.xaaveContract;
         fee_address = await xaave.feeAddress();
         await xaave.set_new_feeAmount(10);
