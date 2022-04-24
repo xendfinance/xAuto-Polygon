@@ -45,6 +45,10 @@ contract APRWithPoolOracle is Context, Structs, Initializable {
   address private _owner;
   address private _candidate;
 
+  bool public fulcrumStatus;
+  bool public fortubeStatus;
+  bool public aaveStatus;
+
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
   uint256 DECIMAL = 10 ** 18;
@@ -57,18 +61,21 @@ contract APRWithPoolOracle is Context, Structs, Initializable {
     _owner = msgSender;
     emit OwnershipTransferred(address(0), msgSender);
     AAVE = address(0xd05e3E715d945B59290df0ae8eF85c1BdB684744);
+    fulcrumStatus = false;
+    fortubeStatus = true;
+    aaveStatus = true;
   }
 
   function getFulcrumAPRAdjusted(address token, uint256 _supply) public view returns(uint256) {
-    if(token == address(0))
+    if(token == address(0) || !fulcrumStatus)
       return 0;
     else
-      return IFulcrum(token).nextSupplyInterestRate(_supply).mul(1e7); // normalize all apy's of aave, fulcrum, fortube
+      return IFulcrum(token).supplyInterestRate().mul(1e7); // normalize all apy's of aave, fulcrum, fortube
   }
 
   function getAaveAPRAdjusted(address token) public view returns (uint256) {
     address protocolProvider = ILendingPoolAddressesProvider(AAVE).getAddress('0x1');
-    if(token == address(0))
+    if(token == address(0) || !aaveStatus)
       return 0;
     else{
       IProtocolProvider provider = IProtocolProvider(protocolProvider);
@@ -77,12 +84,24 @@ contract APRWithPoolOracle is Context, Structs, Initializable {
     }
   }
   function getFortubeAPRAdjusted(address token) public view returns (uint256) {
-    if(token == address(0))
+    if(token == address(0) || !fortubeStatus)
       return 0;
     else{
       IFortube fortube = IFortube(token);
       return fortube.APY().mul(1e9);    // normalize all apy's of aave, fulcrum, fortube
     }
+  }
+
+  function setFulcrumStatus(bool status) external onlyOwner{
+    fulcrumStatus = status;
+  }
+
+  function setFortubeStatus(bool status) external onlyOwner{
+    fortubeStatus = status;
+  }
+
+  function setAaveStatus(bool status) external onlyOwner{
+    aaveStatus = status;
   }
 
   function owner() public view virtual returns (address) {
